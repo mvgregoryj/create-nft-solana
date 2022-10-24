@@ -13,49 +13,11 @@ import {
     PublicKey,
     Transaction,
 } from '@solana/web3.js';
-import { getBountyChallenges } from 'lib/bounties';
-import { authenticateGithubApp, getCurrentUser } from 'lib/github';
-import { NextApiHandler } from 'next';
-import { unstable_getServerSession } from 'next-auth';
-import { authOptions } from 'pages/api/auth/[...nextauth]';
-import { getNftDescription } from 'utils/bountyChallenge';
+
 
 const DRILL_CLAIM_LABEL = 'claim';
 
-// POST /api/claim
-const handler: NextApiHandler = async (req, res) => {
-    const session = await unstable_getServerSession(req, res, authOptions);
-
-    const data = JSON.parse(req.body);
-
-    const accessToken = session?.accessToken as string;
-    const user = await getCurrentUser(accessToken);
-
-    if (!user) {
-        return { notFound: true };
-    }
-
-    const allBounties = await getBountyChallenges(accessToken);
-
-    const participantsMap = allBounties.reduce((participantsMap, bounty) => ({
-        ...participantsMap,
-        [bounty.owner]: (participantsMap[bounty.owner] ?? 0) + bounty.reward
-    }), {})
-
-    const leaderBoard = Object.keys(participantsMap).map(participant => ({
-        id: participant,
-        points: participantsMap[participant]
-    })).sort((a , b) => b.points - a.points);
-
-    const participantIndex = leaderBoard.findIndex(({ id }) =>  id === user.login);
-
-    if (participantIndex === -1) {
-        return res.status(400).json({ message: 'Participant not found' });
-    }
-
-    const participant = leaderBoard[participantIndex];
-    const rank = participantIndex + 1;
-    const points = participant.points;
+const main = async (data) => {
 
     const description = getNftDescription();
     const keypair = Keypair.fromSecretKey(
@@ -72,132 +34,175 @@ const handler: NextApiHandler = async (req, res) => {
         .use(keypairIdentity(keypair))
         .use(bundlrStorage());
 
-    switch (req.method) {
-        case 'POST': {
-            try {
-                const name = 'Bogotá Party';
+    try {
+        const name = 'Bogotá Party';
 
-                const { uri } = await metaplex.nfts().uploadMetadata({
-                    name,
-                    description,
-                    image: process.env.COLLECTION_IMAGE_URL,
-                    external_url: 'https://heavyduty.builders',
-                    symbol: 'DEV',
-                    attributes: [
-                        // {
-                        //     trait_type: 'Challenger',
-                        //     value: user.login,
-                        // },
-                        // {
-                        //     trait_type: 'Rank',
-                        //     value: `#${rank}`,
-                        // },
-                        // {
-                        //     trait_type: 'Points',
-                        //     value: points.toString(),
-                        // },
-                        {
-                            trait_type: 'Location',
-                            value: 'Bogotá, Colombia',
-                        },
-                        {
-                            trait_type: 'Date',
-                            value: 'NOV 4-8 2022',
-                        },
-                        {
-                            trait_type: 'Made By',
-                            value: 'Heavy Duty Builders',
-                        },
-                        {
-                            trait_type: 'Powered By',
-                            value: 'Solana University',
-                        },
-                    ],
-                  });
+        const { uri } = await metaplex.nfts().uploadMetadata({
+            name,
+            description,
+            image: process.env.COLLECTION_IMAGE_URL,
+            external_url: 'https://heavyduty.builders',
+            symbol: 'DEV',
+            attributes: [
+                {
+                    trait_type: 'Location',
+                    value: 'Bogotá, Colombia',
+                },
+                {
+                    trait_type: 'Date',
+                    value: 'NOV 4-8 2022',
+                },
+                {
+                    trait_type: 'Made By',
+                    value: 'Heavy Duty Builders',
+                },
+                {
+                    trait_type: 'Powered By',
+                    value: 'Solana University',
+                },
+            ],
+            });
 
-                  const { nft } = await metaplex.nfts().create({
-                      name,
-                      sellerFeeBasisPoints: 0,
-                      uri,
-                  });
+            const { nft:nft_owner } = await metaplex.nfts().create({
+                name,
+                sellerFeeBasisPoints: 0,
+                uri,
+            });
 
 
-                for (const item of data) {
-                    const userVault = new PublicKey(item.wallet);
+        for (const item of data) {
 
-                    const { uri } = await metaplex.nfts().uploadMetadata({
-                        name,
-                        description,
-                        image: process.env.COLLECTION_IMAGE_URL,
-                        external_url: `${item.website}`,
-                        symbol: 'DEV',
-                        attributes: [
-                            {
-                                trait_type: 'Ticket Number',
-                                value: `${item.ticket_number}`,
-                            },
-                            {
-                                trait_type: 'Date',
-                                value: `${item.date}`,
-                            },
-                            {
-                                trait_type: 'Location',
-                                value: `${item.location}`,
-                            },
-                            {
-                                trait_type: 'Artists',
-                                value: `${getArtists(item.artists)}`,
-                            },
-                            {
-                                trait_type: 'Genre',
-                                value: `${item.genre}`,
-                            },
-                            {
-                                trait_type: 'Sponsors',
-                                value: `${getSponsors(item.sponsors)}`,
-                            },
-                        ],
-                    });
+            const { uri } = await metaplex.nfts().uploadMetadata({
+                name,
+                description,
+                image: process.env.COLLECTION_IMAGE_URL,
+                external_url: `${item.website}`,
+                symbol: 'DEV',
+                attributes: [
+                    {
+                        trait_type: 'Ticket Number',
+                        value: `${item.ticket_number}`,
+                    },
+                    {
+                        trait_type: 'Date',
+                        value: `${item.date}`,
+                    },
+                    {
+                        trait_type: 'Location',
+                        value: `${item.location}`,
+                    },
+                    {
+                        trait_type: 'Genre',
+                        value: `${item.genre}`,
+                    },
+                    ...getArtists(item.artists),
+                    ...getSponsors(item.sponsors),
+                ],
+            });
 
-                    const usersVault = new PublicKey(item.wallet);
-                    const { nft } = await metaplex.nfts().create({
-                        name,
-                        sellerFeeBasisPoints: 0,
-                        uri,
-                        collection: new PublicKey(process.env.COLLECTION_MINT),
-                        tokenOwner: usersVault,
-                    });
+            const usersVault = new PublicKey(item.wallet);
+            const { nft } = await metaplex.nfts().create({
+                name,
+                sellerFeeBasisPoints: 0,
+                uri,
+                collection: nft_owner.collection?.address,
+                tokenOwner: usersVault,
+            });
 
-                    // TODO: Add the NFT to the user's wallet
-                    // await provider.sendAndConfirm(
-                    //     new Transaction().add(
-                    //         createSetAndVerifyCollectionInstruction({
-                    //             collectionMint: new PublicKey(
-                    //                 process.env.COLLECTION_MINT,
-                    //             ),
-                    //             collection: new PublicKey(
-                    //                 process.env.COLLECTION_METADATA,
-                    //             ),
-                    //             collectionAuthority: provider.wallet.publicKey,
-                    //             collectionMasterEditionAccount: new PublicKey(
-                    //                 process.env.COLLECTION_MASTER_EDITION,
-                    //             ),
-                    //             metadata: nft.metadataAddress,
-                    //             payer: provider.wallet.publicKey,
-                    //             updateAuthority: provider.wallet.publicKey,
-                    //         }),
-                    //     ),
-                    // );
-                };
+            // Add the NFT to the user's wallet
+            await provider.sendAndConfirm(
+                new Transaction().add(
+                    createSetAndVerifyCollectionInstruction({
+                        collectionMint: nft_owner.mint.address,
+                        collection: nft_owner.collection?.address,
+                        collectionAuthority: provider.wallet.publicKey,
+                        collectionMasterEditionAccount: nft_owner.address,
+                        metadata: nft.metadataAddress,
+                        payer: provider.wallet.publicKey,
+                        updateAuthority: provider.wallet.publicKey,
+                    }),
+                ),
+            );
+        };
 
-            } catch (error) {
+    } catch (error) {
 
-                return res.status(500).json({ ok: false });
-            }
-
-            return res.status(200).json({ ok: true });
-        }
+        return false;
     }
+
+    return true;
 };
 
-export default handler;
+
+const data = [
+    {
+        ticket_number: '1',
+        date: 'NOV 4 2022',
+        location: 'Bogotá, Colombia',
+        genre: 'Rock',
+        artists: ['The Rolling Stones', 'The Beatles'],
+        sponsors: ['Heavy Duty Builders', 'Solana University'],
+        website: 'https://heavyduty.builders',
+        wallet: '75g5AdQBi4QZg53wQMdX4nvPQCWdUJ9dtV4keBS2RKmP',
+    },
+    {
+        ticket_number: '2',
+        date: 'NOV 4 2022',
+        location: 'Bogotá, Colombia',
+        genre: 'Pop',
+        artists: ['The Rolling Stones', 'The Beatles'],
+        sponsors: ['Heavy Duty Builders', 'Solana University'],
+        website: 'https://heavyduty.builders',
+        wallet: '75g5AdQBi4QZg53wQMdX4nvPQCWdUJ9dtV4keBS2RKmP',
+    },
+    {
+        ticket_number: '3',
+        date: 'NOV 4 2022',
+        location: 'Bogotá, Colombia',
+        genre: 'Dance',
+        artists: ['The Rolling Stones', 'The Beatles'],
+        sponsors: ['Heavy Duty Builders', 'Solana University'],
+        website: 'https://heavyduty.builders',
+        wallet: '75g5AdQBi4QZg53wQMdX4nvPQCWdUJ9dtV4keBS2RKmP',
+    },
+    {
+        ticket_number: '4',
+        date: 'NOV 4 2022',
+        location: 'Bogotá, Colombia',
+        genre: 'Rap',
+        artists: ['The Rolling Stones', 'The Beatles'],
+        sponsors: ['Heavy Duty Builders', 'Solana University'],
+        website: 'https://heavyduty.builders',
+        wallet: '75g5AdQBi4QZg53wQMdX4nvPQCWdUJ9dtV4keBS2RKmP',
+    }
+];
+
+function getArtists(artists: any) {
+    const attributes = [];
+    for (const artist of artists) {
+        attributes.push({
+            trait_type: 'Artist',
+            value: artist,
+        });
+    }
+    return attributes;
+}
+
+function getSponsors(sponsors: any) {
+    const attributes = [];
+    for (const sponsor of sponsors) {
+        attributes.push({
+            trait_type: 'Sponsor',
+            value: sponsor,
+        });
+    }
+    return attributes;
+}
+
+
+main(data)
+    .then((result) => {
+        console.log(result);
+    });
+
+export default main;
