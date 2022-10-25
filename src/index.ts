@@ -14,16 +14,27 @@ import {
     Transaction,
 } from '@solana/web3.js';
 
+// import getNftDescription from utils.ts
+import {
+    getNftDescription,
+    getArtists,
+    getSponsors
+} from './utils/utils';
 
-const DRILL_CLAIM_LABEL = 'claim';
+
 
 const main = async (data) => {
 
     const description = getNftDescription();
-    const keypair = Keypair.fromSecretKey(
-        new Uint8Array(Buffer.from(process.env.CERTIFIER_SECRET, 'base64')),
-    );
-    const connection = new Connection(clusterApiUrl('mainnet-beta'));
+    const keypair = Keypair.generate();                     // Replace with Heavy-Duty-keypair
+
+    const connection = new Connection(clusterApiUrl('devnet'));
+
+    // AirDrop SOL to the keypair
+    // 1e9 lamports = 10^9 lamports = 1 SOL
+    let txhash = await connection.requestAirdrop(keypair.publicKey, 1e9);
+    console.log(`txhash: ${txhash}`);
+
     const provider = new AnchorProvider(
         connection,
         new Wallet(keypair),
@@ -40,7 +51,8 @@ const main = async (data) => {
         const { uri } = await metaplex.nfts().uploadMetadata({
             name,
             description,
-            image: process.env.COLLECTION_IMAGE_URL,
+            // image: process.env.COLLECTION_IMAGE_URL,
+            image: ,
             external_url: 'https://heavyduty.builders',
             symbol: 'DEV',
             attributes: [
@@ -176,28 +188,6 @@ const data = [
         wallet: '75g5AdQBi4QZg53wQMdX4nvPQCWdUJ9dtV4keBS2RKmP',
     }
 ];
-
-function getArtists(artists: any) {
-    const attributes = [];
-    for (const artist of artists) {
-        attributes.push({
-            trait_type: 'Artist',
-            value: artist,
-        });
-    }
-    return attributes;
-}
-
-function getSponsors(sponsors: any) {
-    const attributes = [];
-    for (const sponsor of sponsors) {
-        attributes.push({
-            trait_type: 'Sponsor',
-            value: sponsor,
-        });
-    }
-    return attributes;
-}
 
 
 main(data)
