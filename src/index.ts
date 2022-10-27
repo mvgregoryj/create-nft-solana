@@ -42,7 +42,11 @@ const main = async (data) => {
 
     const metaplex = new Metaplex(connection)
         .use(keypairIdentity(keypair))
-        .use(bundlrStorage());
+        .use(bundlrStorage({
+            address: 'https://devnet.bundlr.network',
+            providerUrl: 'https://api.devnet.solana.com',
+            timeout: 60000,
+        }));
 
     try {
         const name = 'Bogotá Party';
