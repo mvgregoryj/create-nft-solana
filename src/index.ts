@@ -22,7 +22,6 @@ import {
 } from './utils/utils';
 
 
-
 const main = async (data) => {
 
     const description = getNftDescription();
@@ -51,8 +50,8 @@ const main = async (data) => {
         const { uri } = await metaplex.nfts().uploadMetadata({
             name,
             description,
-            // image: process.env.COLLECTION_IMAGE_URL,
-            image: ,
+            //image: process.env.COLLECTION_IMAGE_URL,
+            image: 'http://as01.epimg.net/img/comunes/fotos/fichas/equipos/large/3.png',
             external_url: 'https://heavyduty.builders',
             symbol: 'DEV',
             attributes: [
@@ -62,7 +61,7 @@ const main = async (data) => {
                 },
                 {
                     trait_type: 'Date',
-                    value: 'NOV 4-8 2022',
+                    value: 'OCT 25 2022',
                 },
                 {
                     trait_type: 'Made By',
@@ -87,7 +86,8 @@ const main = async (data) => {
             const { uri } = await metaplex.nfts().uploadMetadata({
                 name,
                 description,
-                image: process.env.COLLECTION_IMAGE_URL,
+                //image: process.env.COLLECTION_IMAGE_URL,
+                image: 'http://as01.epimg.net/img/comunes/fotos/fichas/equipos/large/3.png',
                 external_url: `${item.website}`,
                 symbol: 'DEV',
                 attributes: [
@@ -195,4 +195,4 @@ main(data)
         console.log(result);
     });
 
-export default main;
+// export default main;
