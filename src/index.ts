@@ -22,7 +22,7 @@ import {
 } from './utils/utils';
 
 
-const main = async (data) => {
+const main = async (data: any) => {
 
     const description = getNftDescription();
     const keypair = Keypair.generate();                     // Replace with Heavy-Duty-keypair
@@ -130,7 +130,7 @@ const main = async (data) => {
                 new Transaction().add(
                     createSetAndVerifyCollectionInstruction({
                         collectionMint: nft_owner.mint.address,
-                        collection: nft_owner.collection?.address,
+                        collection: nft_owner.metadataAddress,
                         collectionAuthority: provider.wallet.publicKey,
                         collectionMasterEditionAccount: nft_owner.address,
                         metadata: nft.metadataAddress,
@@ -142,7 +142,7 @@ const main = async (data) => {
         };
 
     } catch (error) {
-
+        console.log(error)
         return false;
     }
 
@@ -199,4 +199,3 @@ main(data)
         console.log(result);
     });
 
-// export default main;
