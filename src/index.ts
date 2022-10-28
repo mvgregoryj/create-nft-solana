@@ -4,7 +4,9 @@ import {
     keypairIdentity,
     Metaplex
 } from '@metaplex-foundation/js';
-import { createVerifyCollectionInstruction } from '@metaplex-foundation/mpl-token-metadata';
+import {
+    createVerifySizedCollectionItemInstruction
+} from '@metaplex-foundation/mpl-token-metadata';
 import {
     clusterApiUrl,
     Connection,
@@ -118,12 +120,12 @@ const main = async (event: Event) => {
         // Add the NFT to the user's wallet
         await provider.sendAndConfirm(
             new Transaction().add(
-                createVerifyCollectionInstruction({
+                createVerifySizedCollectionItemInstruction({
                     collectionMint: collectionNft.mint.address,
                     collection: collectionNft.metadataAddress,
                     collectionAuthority: provider.wallet.publicKey,
-                    collectionMasterEditionAccount: collectionNft.address,
-                    metadata: nft.metadataAddress,
+                    collectionMasterEditionAccount:
+                        collectionNft.edition.address,
                     payer: provider.wallet.publicKey,
                 })
             )
