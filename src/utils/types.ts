@@ -4,6 +4,8 @@ export interface Ticket {
 }
 
 export interface Event {
+    name: string;
+    description: string;
     date: string;
     location: string;
     genre: string;

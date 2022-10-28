@@ -4,9 +4,7 @@ import {
     keypairIdentity,
     Metaplex
 } from '@metaplex-foundation/js';
-import {
-    createVerifySizedCollectionItemInstruction
-} from '@metaplex-foundation/mpl-token-metadata';
+import { createVerifySizedCollectionItemInstruction } from '@metaplex-foundation/mpl-token-metadata';
 import {
     clusterApiUrl,
     Connection,
@@ -15,8 +13,9 @@ import {
     Transaction
 } from '@solana/web3.js';
 import * as dotenv from 'dotenv';
+import { event } from './event-data';
 import { Event } from './utils';
-import { getArtists, getNftDescription, getSponsors } from './utils/utils';
+import { toAttribute, toAttributes } from './utils/utils';
 
 dotenv.config();
 
@@ -25,7 +24,6 @@ const main = async (event: Event) => {
         throw new Error('Payer private key missing.');
     }
 
-    const description = getNftDescription();
     const keypair = Keypair.fromSecretKey(
         new Uint8Array(Buffer.from(process.env.PAYER_PRIVATE_KEY, 'base64'))
     );
@@ -43,78 +41,69 @@ const main = async (event: Event) => {
         })
     );
 
-    const name = 'Bogotá Party';
+    if (process.env.LOG_ENABLED === 'true') {
+        console.log('minting collection', event.name);
+    }
 
-    const { uri } = await metaplex.nfts().uploadMetadata({
-        name,
-        description,
-        image: event.image,
-        external_url: event.website,
-        symbol: 'DEV',
-        attributes: [
-            {
-                trait_type: 'Location',
-                value: 'Bogotá, Colombia',
-            },
-            {
-                trait_type: 'Date',
-                value: 'OCT 25 2022',
-            },
-            {
-                trait_type: 'Made By',
-                value: 'Heavy Duty Builders',
-            },
-            {
-                trait_type: 'Powered By',
-                value: 'Solana University',
-            },
-        ],
-    });
-
-    const { nft: collectionNft } = await metaplex.nfts().create({
-        name,
-        sellerFeeBasisPoints: 0,
-        uri,
-        isCollection: true,
-        collectionAuthority: keypair,
-        tokenOwner: provider.wallet.publicKey
-    });
-
-    for (const ticket of event.tickets) {
-        const { uri } = await metaplex.nfts().uploadMetadata({
-            name,
-            description,
+    const { uri: collectionMetadataUri } = await metaplex
+        .nfts()
+        .uploadMetadata({
+            name: event.name,
+            description: event.description,
             image: event.image,
             external_url: event.website,
             symbol: 'EVENT',
             attributes: [
-                {
-                    trait_type: 'Ticket #',
-                    value: `${ticket.number}`,
-                },
-                {
-                    trait_type: 'Date',
-                    value: event.date,
-                },
-                {
-                    trait_type: 'Location',
-                    value: event.location,
-                },
-                {
-                    trait_type: 'Genre',
-                    value: event.genre,
-                },
-                ...getArtists(event.artists),
-                ...getSponsors(event.sponsors),
+                toAttribute('Location')(event.location),
+                toAttribute('Date')(event.date),
+                ...toAttributes('Sponsor', event.sponsors),
             ],
         });
 
-        const { nft } = await metaplex.nfts().create({
-            name,
+    const { nft: collectionNft } = await metaplex.nfts().create({
+        name: event.name,
+        sellerFeeBasisPoints: 0,
+        uri: collectionMetadataUri,
+        symbol: 'EVENT',
+        isCollection: true,
+    });
+
+    if (process.env.LOG_ENABLED === 'true') {
+        console.log('collection minted', collectionNft.mint.address.toBase58());
+    }
+
+    for (const ticket of event.tickets) {
+        const ticketName = `Ticket #${ticket.number}: ${event.name}`;
+
+        if (process.env.LOG_ENABLED === 'true') {
+            console.log('minting ticket', ticketName);
+        }
+
+        const { uri: ticketMetadataUri } = await metaplex
+            .nfts()
+            .uploadMetadata({
+                name: ticketName,
+                description: `This NFT represents ticket #${ticket.number} for the ${event.name} event.`,
+                image: event.image,
+                external_url: event.website,
+                symbol: 'EVENT',
+                attributes: [
+                    toAttribute('Ticket #')(`${ticket.number}`),
+                    toAttribute('Location')(event.location),
+                    toAttribute('Date')(event.date),
+                    toAttribute('Genre')(event.genre),
+                    ...toAttributes('Artist', event.artists),
+                    ...toAttributes('Sponsor', event.sponsors),
+                ],
+            });
+
+        const { nft: ticketNft } = await metaplex.nfts().create({
+            name: ticketName,
             sellerFeeBasisPoints: 0,
-            uri,
+            uri: ticketMetadataUri,
             collection: collectionNft.mint.address,
             tokenOwner: new PublicKey(ticket.wallet),
+            symbol: 'TICKET',
         });
 
         // Add the NFT to the user's wallet
@@ -126,40 +115,24 @@ const main = async (event: Event) => {
                     collectionAuthority: provider.wallet.publicKey,
                     collectionMasterEditionAccount:
                         collectionNft.edition.address,
+                    metadata: ticketNft.metadataAddress,
                     payer: provider.wallet.publicKey,
                 })
             )
         );
+
+        if (process.env.LOG_ENABLED === 'true') {
+            console.log(
+                'ticket minted and verified',
+                ticketNft.mint.address.toBase58()
+            );
+        }
     }
 };
 
-const event = {
-    date: 'NOV 4 2022',
-    location: 'Bogotá, Colombia',
-    genre: 'Rock',
-    artists: ['The Rolling Stones', 'The Beatles'],
-    sponsors: ['Heavy Duty Builders', 'Solana University'],
-    website: 'https://heavyduty.builders',
-    image: 'http://as01.epimg.net/img/comunes/fotos/fichas/equipos/large/3.png',
-    tickets: [
-        {
-            number: 1,
-            wallet: '75g5AdQBi4QZg53wQMdX4nvPQCWdUJ9dtV4keBS2RKmP',
-        },
-        /* {
-            number: 2,
-            wallet: '75g5AdQBi4QZg53wQMdX4nvPQCWdUJ9dtV4keBS2RKmP',
-        },
-        {
-            number: 3,
-            wallet: '75g5AdQBi4QZg53wQMdX4nvPQCWdUJ9dtV4keBS2RKmP',
-        }, */
-    ],
-};
-
 main(event)
-    .then((result) => {
-        console.log(result);
+    .then(() => {
+        console.log('OK');
     })
     .catch((error) => {
         console.log(error);
