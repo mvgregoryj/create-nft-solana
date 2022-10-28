@@ -2,7 +2,7 @@ import { AnchorProvider, Wallet } from '@heavy-duty/anchor';
 import {
     bundlrStorage,
     keypairIdentity,
-    Metaplex
+    Metaplex,
 } from '@metaplex-foundation/js';
 import { createVerifySizedCollectionItemInstruction } from '@metaplex-foundation/mpl-token-metadata';
 import {
@@ -10,7 +10,7 @@ import {
     Connection,
     Keypair,
     PublicKey,
-    Transaction
+    Transaction,
 } from '@solana/web3.js';
 import * as dotenv from 'dotenv';
 import { event } from './event-data';
@@ -56,8 +56,9 @@ const main = async (event: Event) => {
             attributes: [
                 toAttribute('Location')(event.location),
                 toAttribute('Date')(event.date),
-                ...toAttributes('Sponsor', event.sponsors),
-            ],
+            ]
+                .concat(toAttributes('Artist', event.artists))
+                .concat(toAttributes('Sponsor', event.sponsors)),
         });
 
     const { nft: collectionNft } = await metaplex.nfts().create({
@@ -92,9 +93,9 @@ const main = async (event: Event) => {
                     toAttribute('Location')(event.location),
                     toAttribute('Date')(event.date),
                     toAttribute('Genre')(event.genre),
-                    ...toAttributes('Artist', event.artists),
-                    ...toAttributes('Sponsor', event.sponsors),
-                ],
+                ]
+                    .concat(toAttributes('Artist', event.artists))
+                    .concat(toAttributes('Sponsor', event.sponsors)),
             });
 
         const { nft: ticketNft } = await metaplex.nfts().create({
