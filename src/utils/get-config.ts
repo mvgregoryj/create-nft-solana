@@ -14,6 +14,7 @@ export const getConfig = () => {
     const keypair = Keypair.fromSecretKey(
         new Uint8Array(Buffer.from(process.env.PAYER_PRIVATE_KEY, 'base64'))
     );
+
     const connection = new Connection(
         clusterApiUrl(
             process.env.PRODUCTION === 'true' ? 'mainnet-beta' : 'devnet'

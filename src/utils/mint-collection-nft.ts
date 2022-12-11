@@ -1,6 +1,6 @@
 import { Metaplex } from '@metaplex-foundation/js';
 import { Event } from './types';
-import { toAttribute, toAttributes } from './utils';
+import { attributes } from './utils';
 
 export const mintCollectionNft = async (metaplex: Metaplex, event: Event) => {
     if (process.env.LOG_ENABLED === 'true') {
@@ -15,13 +15,7 @@ export const mintCollectionNft = async (metaplex: Metaplex, event: Event) => {
             image: event.image,
             external_url: event.website,
             symbol: 'EVENT',
-            attributes: [
-                toAttribute('Location')(event.location),
-                toAttribute('Date')(event.date),
-                toAttribute('Genre')(event.genre),
-            ]
-                .concat(toAttributes('Artist', event.artists))
-                .concat(toAttributes('Sponsor', event.sponsors)),
+            attributes: attributes(Object.entries(event))
         });
 
     const { nft: collectionNft } = await metaplex.nfts().create({

@@ -1,7 +1,7 @@
 import { Metaplex } from '@metaplex-foundation/js';
 import { PublicKey } from '@solana/web3.js';
 import { Event, Ticket } from './types';
-import { toAttribute, toAttributes } from './utils';
+import { toAttribute, attributes} from './utils';
 
 export const mintTicketNft = async (
     metaplex: Metaplex,
@@ -23,13 +23,9 @@ export const mintTicketNft = async (
         symbol: 'EVENT',
         attributes: [
             toAttribute('Ticket #')(`${ticket.number}`),
-            toAttribute('Location')(event.location),
-            toAttribute('Date')(event.date),
-            toAttribute('Genre')(event.genre),
         ]
-            .concat(toAttributes('Artist', event.artists))
-            .concat(toAttributes('Sponsor', event.sponsors)),
-    });
+        .concat(attributes(Object.entries(event)))
+});
 
     const { nft: ticketNft } = await metaplex.nfts().create({
         name: ticketName,

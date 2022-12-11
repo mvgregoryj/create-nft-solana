@@ -20,7 +20,7 @@
   },
   "homepage": "https://github.com/mvgregoryj/create-nft-solana#readme",
   "devDependencies": {
-    "typescript": "^4.8.4"
+    "typescript": "^4.9.3"
   },
   "dependencies": {
     "@heavy-duty/anchor": "^0.24.2-2",
